@@ -1,52 +1,76 @@
+import argparse
+import json
+from bluepysnap import Circuit
 from reader import read_nodes, read_edges
 from neo4j_connector import Neo4jConnector
 from subsampling import subsample_nodes, subsample_edges
-import argparse
+from dotenv import load_dotenv
+import os
+import pandas as pd
 
-def main(circuit_config: dict, neo4j_uri: str, neo4j_user: str, neo4j_password: str, node_sample_size: int, edge_sample_size: int):
+def main(circuit_config_path: str):
     """
     Main function to read nodes and edges from SONATA files, subsample them,
     and insert them into a Neo4j database.
-
-    Parameters:
-    - circuit_config (dict): Configuration dictionary containing paths to the
-      nodes and edges files.
-    - neo4j_uri (str): URI for connecting to the Neo4j database.
-    - neo4j_user (str): Username for Neo4j authentication.
-    - neo4j_password (str): Password for Neo4j authentication.
-    - node_sample_size (int): Number of nodes to sample from the nodes file.
-    - edge_sample_size (int): Number of edges to sample from the edges file.
     """
-    nodes = read_nodes(circuit_config['nodes_file'])
-    edges = read_edges(circuit_config['edges_file'])
+    # Load environment variables
+    load_dotenv()
 
-    sampled_nodes = subsample_nodes(nodes, node_sample_size)
-    sampled_edges = subsample_edges(edges, edge_sample_size)
+    neo4j_uri = os.getenv('NEO4J_URI')
+    neo4j_user = os.getenv('NEO4J_USER')
+    neo4j_password = os.getenv('NEO4J_PASSWORD')
+    node_proportion = float(os.getenv('NODE_PROPORTION', 1.0))
+    edge_proportion = float(os.getenv('EDGE_PROPORTION', 1.0))
 
+    # Initialize BluePySnap Circuit
+    circuit = Circuit(circuit_config_path)
+
+    # Read and subsample nodes using BluePySnap
+    nodes_df = []
+    for pop_name in circuit.nodes.population_names:
+        node_population = circuit.nodes[pop_name]
+        node_df = node_population.get()
+        nodes_df.append(node_df)
+
+    # Concatenate all node DataFrames
+    all_nodes_df = pd.concat(nodes_df, ignore_index=True)
+    sampled_nodes_df = all_nodes_df.sample(frac=node_proportion)
+
+    # Read and subsample edges using BluePySnap
+    edges_df = []
+    for pop_name in circuit.edges.population_names:
+        edge_population = circuit.edges[pop_name]
+        edge_df = edge_population.get()
+        edges_df.append(edge_df)
+
+    # Concatenate all edge DataFrames
+    all_edges_df = pd.concat(edges_df, ignore_index=True)
+    sampled_edges_df = all_edges_df.sample(frac=edge_proportion)
+
+    # Connect to Neo4j and insert data
     connector = Neo4jConnector(neo4j_uri, neo4j_user, neo4j_password)
 
-    for node in sampled_nodes:
+    for _, row in sampled_nodes_df.iterrows():
+        node = {
+            'id': row['node_id'],  # Assuming 'node_id' is a column in the DataFrame
+            'properties': row.to_dict()
+        }
         connector.create_node(node['id'], node['properties'])
 
-    for edge in sampled_edges:
+    for _, row in sampled_edges_df.iterrows():
+        edge = {
+            'start_id': row['source_node_id'],  # Assuming 'source_node_id' is a column
+            'end_id': row['target_node_id'],    # Assuming 'target_node_id' is a column
+            'properties': row.to_dict()
+        }
         connector.create_edge(edge['start_id'], edge['end_id'], edge['properties'])
 
     connector.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process SONATA files and insert data into Neo4j.")
-    parser.add_argument('--nodes_file', type=str, required=True, help='Path to the nodes file.')
-    parser.add_argument('--edges_file', type=str, required=True, help='Path to the edges file.')
-    parser.add_argument('--neo4j_uri', type=str, default='bolt://localhost:7687', help='URI for connecting to the Neo4j database.')
-    parser.add_argument('--neo4j_user', type=str, default='neo4j', help='Username for Neo4j authentication.')
-    parser.add_argument('--neo4j_password', type=str, default='password', help='Password for Neo4j authentication.')
-    parser.add_argument('--node_sample_size', type=int, required=True, help='Number of nodes to sample.')
-    parser.add_argument('--edge_sample_size', type=int, required=True, help='Number of edges to sample.')
+    parser.add_argument('--circuit_config', type=str, required=True, help='Path to the circuit configuration JSON file.')
 
     args = parser.parse_args()
 
-    circuit_config = {
-        'nodes_file': args.nodes_file,
-        'edges_file': args.edges_file
-    }
-    main(circuit_config, args.neo4j_uri, args.neo4j_user, args.neo4j_password, args.node_sample_size, args.edge_sample_size)
+    main(args.circuit_config)
