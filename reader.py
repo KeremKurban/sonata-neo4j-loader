@@ -1,13 +1,25 @@
 import h5py
 
-def read_nodes(file_path):
+def read_nodes(file_path:str):
     with h5py.File(file_path, 'r') as f:
-        nodes = f['/nodes']
-        # Extract node properties
-        return nodes
+        nodes_group = f['/nodes/NodeA/0']
+        node_data = {}
 
-def read_edges(file_path):
+        # Extract each dataset
+        for dataset_name in nodes_group:
+            dataset = nodes_group[dataset_name]
+            node_data[dataset_name] = dataset[()]
+
+        return node_data
+
+def read_edges(file_path:str):
     with h5py.File(file_path, 'r') as f:
-        edges = f['/edges']
-        # Extract edge properties
-        return edges
+        edges_group = f['/edges/NodeA__NodeB__chemical/0']
+        edge_data = {}
+
+        # Extract each dataset
+        for dataset_name in edges_group:
+            dataset = edges_group[dataset_name]
+            edge_data[dataset_name] = dataset[()]
+
+        return edge_data
