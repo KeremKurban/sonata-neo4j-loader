@@ -14,11 +14,9 @@ def add_constraints_and_indices(connector):
     with connector.driver.session() as session:
         # Create constraints for Neurons
         session.run("CREATE CONSTRAINT FOR (n:Neuron) REQUIRE n.id IS UNIQUE;")
-        session.run("CREATE INDEX FOR (n:Neuron) ON (n.id);")
 
         # Create constraints for Populations
         session.run("CREATE CONSTRAINT FOR (p:Population) REQUIRE p.name IS UNIQUE;")
-        session.run("CREATE INDEX FOR (p:Population) ON (p.name);")
 
 
 def bulk_insert_population_nodes(connector, populations: list):
@@ -163,7 +161,6 @@ def main(circuit_config_path: str):
     nodes, belongs_to_relations, populations = extract_nodes(circuit, node_proportion)
     edges = extract_edges(circuit, edge_proportion)
 
-    breakpoint()
     # Connect to Neo4j
     connector = Neo4jConnector(neo4j_uri, neo4j_user, neo4j_password)
 
