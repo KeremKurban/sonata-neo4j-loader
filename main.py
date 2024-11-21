@@ -267,10 +267,16 @@ def extract_edges(
         edge_population = circuit.edges[pop_name]
         edge_storage = libsonata.EdgeStorage(edge_population.h5_filepath)
         population = edge_storage.open_population(pop_name)
-
+        logger.info(f"Total edges found in population {pop_name}: {population.size}")
         # Select a subset of edge IDs based on the given proportion
         total_edges = population.size
         selected_edge_count = int(total_edges * proportion)
+        logger.info(f"Selected {selected_edge_count} edges for import from population {pop_name}.")
+        
+        user_input = input(f"Do you want to proceed with importing {selected_edge_count} edges? (yes/no): ").strip().lower()
+        if user_input != 'yes':
+            logger.info("Edge import process terminated by user.")
+            return []
         edge_ids = list(range(total_edges))
         selected_edge_ids = random.sample(edge_ids, selected_edge_count)
 
@@ -385,6 +391,138 @@ def clear_database(connector: Neo4jConnector) -> None:
         logger.error(f"Error clearing database: {e}")
 
 
+def create_nodegroup_nodes(connector: Neo4jConnector, property_name: str, label: str, nodes: List[Dict[str, Any]]) -> None:
+    """
+    Create NodeGroup nodes in Neo4j based on a specified property and label.
+
+    Parameters
+    ----------
+    connector : Neo4jConnector
+        An instance of the Neo4jConnector class.
+    property_name : str
+        The property name to base the NodeGroup nodes on (e.g., 'mtype').
+    label : str
+        The label to assign to the NodeGroup nodes (e.g., 'MType').
+    nodes : list of dict
+        A list of dictionaries containing node properties.
+    """
+    unique_values = {node[property_name] for node in nodes if property_name in node and node[property_name] is not None}
+    query = f"""
+    UNWIND $values AS value
+    MERGE (n:NodeGroup:{label} {{name: value}})
+    """
+    try:
+        with connector.driver.session() as session:
+            session.run(query, values=list(unique_values))
+            logger.info(f"NodeGroup {label} nodes created successfully.")
+    except Exception as e:
+        logger.error(f"Error creating NodeGroup {label} nodes: {e}")
+
+def create_neuron_belongs_to_nodegroup_relationships(connector: Neo4jConnector, property_name: str, label: str, nodes: List[Dict[str, Any]]) -> None:
+    """
+    Create BELONGS_TO relationships between nodes and NodeGroup nodes based on a specified property.
+
+    Parameters
+    ----------
+    connector : Neo4jConnector
+        An instance of the Neo4jConnector class.
+    property_name : str
+        The property name to base the relationships on (e.g., 'mtype').
+    label : str
+        The label of the NodeGroup nodes (e.g., 'MType').
+    nodes : list of dict
+        A list of dictionaries containing node properties.
+    """
+    query = f"""
+    UNWIND $nodes AS node
+    MATCH (n:Neuron {{id: node.id, population_name: node.population_name}})
+    MATCH (g:NodeGroup:{label} {{name: node.{property_name}}})
+    MERGE (n)-[:BELONGS_TO_{label.upper()}]->(g)
+    """
+    try:
+        with connector.driver.session() as session:
+            session.run(query, nodes=nodes)
+            logger.info(f"BELONGS_TO_{label.upper()} relationships created successfully.")
+    except Exception as e:
+        logger.error(f"Error creating BELONGS_TO_{label.upper()} relationships: {e}")
+
+def create_nodegroup_relationships(connector: Neo4jConnector) -> None:
+    """
+    Create relationships between NodeGroup nodes based on connections between Neuron nodes.
+
+    Parameters
+    ----------
+    connector : Neo4jConnector
+        An instance of the Neo4jConnector class.
+    """
+    query = """
+    MATCH (n1:Neuron)-[r:SYNAPSE]->(n2:Neuron)
+    MATCH (g1:NodeGroup {name: n1.mtype}), (g2:NodeGroup {name: n2.mtype})
+    WHERE g1 <> g2
+    WITH g1, g2, avg(r.conductance) AS avg_conductance, avg(r.delay) AS avg_delay,
+    MERGE (g1)-[rg:AGGREGATED_SYNAPSE]->(g2)
+    SET rg.avg_conductance = avg_conductance,
+    SET rg.avg_delay = avg_delay
+    """
+    try:
+        with connector.driver.session() as session:
+            session.run(query)
+            logger.info("NodeGroup relationships created successfully.")
+    except Exception as e:
+        logger.error(f"Error creating NodeGroup relationships: {e}")
+
+def create_nodegroup_relationships(connector: Neo4jConnector) -> None:
+    """
+    Create relationships between NodeGroup nodes based on connections between Neuron nodes.
+
+    Parameters
+    ----------
+    connector : Neo4jConnector
+        An instance of the Neo4jConnector class.
+    """
+    query = """
+    MATCH (n1:Neuron)-[r:SYNAPSE]->(n2:Neuron)
+    MATCH (g1:NodeGroup {name: n1.mtype}), (g2:NodeGroup {name: n2.mtype})
+    WITH g1, g2, r,
+         avg(r.branch_order) AS avg_branch_order,
+         avg(r.conductance) AS avg_conductance,
+         avg(r.conductance_scale_factor) AS avg_conductance_scale_factor,
+         avg(r.decay_time) AS avg_decay_time,
+         avg(r.delay) AS avg_delay,
+         avg(r.depression_time) AS avg_depression_time,
+         avg(r.facilitation_time) AS avg_facilitation_time,
+         avg(r.n_rrp_vesicles) AS avg_n_rrp_vesicles,
+         avg(r.spine_length) AS avg_spine_length,
+         avg(r.u_hill_coefficient) AS avg_u_hill_coefficient,
+         avg(r.u_syn) AS avg_u_syn,
+         collect(r.afferent_section_type) AS afferent_types,
+         collect(r.efferent_section_type) AS efferent_types,
+         collect(r.syn_type_id) AS syn_type_ids
+    UNWIND afferent_types AS afferent_type
+    WITH g1, g2, r, avg_branch_order, avg_conductance, avg_conductance_scale_factor, avg_decay_time, avg_delay, avg_depression_time, avg_facilitation_time, avg_n_rrp_vesicles, avg_spine_length, avg_u_hill_coefficient, avg_u_syn, afferent_type, size(afferent_types) AS total_afferent_types
+    WITH g1, g2, r, avg_branch_order, avg_conductance, avg_conductance_scale_factor, avg_decay_time, avg_delay, avg_depression_time, avg_facilitation_time, avg_n_rrp_vesicles, avg_spine_length, avg_u_hill_coefficient, avg_u_syn, afferent_type, count(afferent_type) AS afferent_count, total_afferent_types
+    WITH g1, g2, r, avg_branch_order, avg_conductance, avg_conductance_scale_factor, avg_decay_time, avg_delay, avg_depression_time, avg_facilitation_time, avg_n_rrp_vesicles, avg_spine_length, avg_u_hill_coefficient, avg_u_syn, collect([afferent_type, afferent_count * 1.0 / total_afferent_types]) AS afferent_distribution
+    MERGE (g1)-[rg:AGGREGATED_SYNAPSE]->(g2)
+    SET rg.avg_branch_order = avg_branch_order,
+        rg.avg_conductance = avg_conductance,
+        rg.avg_conductance_scale_factor = avg_conductance_scale_factor,
+        rg.avg_decay_time = avg_decay_time,
+        rg.avg_delay = avg_delay,
+        rg.avg_depression_time = avg_depression_time,
+        rg.avg_facilitation_time = avg_facilitation_time,
+        rg.avg_n_rrp_vesicles = avg_n_rrp_vesicles,
+        rg.avg_spine_length = avg_spine_length,
+        rg.avg_u_hill_coefficient = avg_u_hill_coefficient,
+        rg.avg_u_syn = avg_u_syn,
+        rg.afferent_section_type_distribution = apoc.map.fromPairs(afferent_distribution)
+    """
+    try:
+        with connector.driver.session() as session:
+            session.run(query)
+            logger.info("NodeGroup relationships created successfully.")
+    except Exception as e:
+        logger.error(f"Error creating NodeGroup relationships: {e}")
+
 def main(circuit_config_path: str, apply_labels: bool = False) -> None:
     """
     Main function to process SONATA files, extract nodes, edges, and populations, and insert them into Neo4j.
@@ -405,6 +543,7 @@ def main(circuit_config_path: str, apply_labels: bool = False) -> None:
     node_proportion = float(os.getenv("NODE_PROPORTION", 1.0))
     edge_proportion = float(os.getenv("EDGE_PROPORTION", 1.0))
     node_set = os.getenv("NODE_SET")
+    apply_mtype_labels = os.getenv("APPLY_MTYPE_LABELS")
     # Initialize BluePySnap Circuit
     circuit = Circuit(circuit_config_path)
 
@@ -423,11 +562,11 @@ def main(circuit_config_path: str, apply_labels: bool = False) -> None:
     # Convert sampled_nodes_df to list of dicts
     nodes = sampled_nodes_df.to_dict("records")
 
-    # Add constraints and indices
-    add_constraints_and_indices(connector)
+    # Create NodeGroup nodes based on mtype
+    create_nodegroup_nodes(connector, 'mtype', 'MType', nodes)
 
     # Insert population nodes
-    bulk_insert_population_nodes(connector, populations)
+    # bulk_insert_population_nodes(connector, populations)
 
     # Insert neuron nodes with mtype labels in chunks
     chunk_size = 1000
@@ -435,21 +574,28 @@ def main(circuit_config_path: str, apply_labels: bool = False) -> None:
         chunk = nodes[i : i + chunk_size]
         bulk_insert_neuron_nodes(connector, chunk)
 
-    # Insert BELONGS_TO relationships in chunks
-    for i in range(0, len(belongs_to_relations), chunk_size):
-        chunk = belongs_to_relations[i : i + chunk_size]
-        bulk_insert_belongs_to_relationships(connector, chunk)
+    # Create BELONGS_TO_MTYPE relationships
+    create_neuron_belongs_to_nodegroup_relationships(connector, 'mtype', 'MType', nodes)
+
+    # # Insert BELONGS_TO relationships in chunks
+    # for i in range(0, len(belongs_to_relations), chunk_size):
+    #     chunk = belongs_to_relations[i : i + chunk_size]
+    #     bulk_insert_belongs_to_relationships(connector, chunk)
 
     # Insert edges in chunks
     for i in range(0, len(edges), chunk_size):
         chunk = edges[i : i + chunk_size]
         bulk_insert_edges(connector, chunk)
 
+    # Create relationships between NodeGroup nodes
+    create_nodegroup_relationships(connector)
+
     # Optionally add labels based on mtype
-    add_labels_based_on_mtype(connector, apply_labels)
+    # add_labels_based_on_mtype(connector, apply_mtype_labels)
 
     # Close connection
     connector.close()
+
 
 
 if __name__ == "__main__":
