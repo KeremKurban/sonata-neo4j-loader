@@ -92,48 +92,15 @@ python src/main.py --simulation_config path/to/simulation_config.json
 ```
 In addition to entities extracted from load circuit, this will also extract the following entities:
 
+### Nodes
+
 - **Spike** :
     Spike event described as node 
 
-Edges:
+### Edges
 
 - **HAS_SPIKE** :
     Represents the relationship between a neuron and its spike events, indicating which spikes are associated with which neurons.
-
-
-## Node and Edge Entities Created 
-
-### Nodes
-
-- **Neuron Nodes**: Each neuron in the SONATA circuit is represented as a node in Neo4j. These nodes have properties such as `id` and `population_name`, and may include additional attributes extracted from the SONATA files.
-
-- **NodeGroup Nodes**: These nodes are created based on specific properties of neurons, such as `mtype`. They help in organizing neurons into groups for easier querying and analysis.
-
-- **SClass Nodes**: Represent synapse classes in the circuit. These nodes are linked to neurons based on the `synapse_class` property.
-
-### Edges
-
-- **SYNAPSE Edges**: These edges represent synaptic connections between neurons. Each edge has properties that describe the synapse, such as weight or type, and connects two neuron nodes.
-
-- **BELONGS_TO_MTYPE Relationships**: These relationships connect neuron nodes to their respective NodeGroup nodes based on the `mtype` property.
-
-- **BELONGS_TO_SCLASS Relationships**: These relationships link neurons to their corresponding SClass nodes, indicating the synapse class they belong to.
-
-### Example Code References
-
-- **Neuron Node Creation**: The logic for creating neuron nodes can be found in the `Neo4jConnector` class.
-  ```python:sonata_to_neo4j/src/neo4j_connector.py
-  ```
-
-- **SYNAPSE Edge Creation**: The creation of synapse edges is handled in the `Neo4jConnector` class.
-  ```python:sonata_to_neo4j/src/neo4j_connector.py
-  ```
-
-- **BELONGS_TO_SCLASS Relationships**: The creation of these relationships is detailed in the `neo4j_operations.py`.
-  ```python:sonata_to_neo4j/src/circuit/neo4j_operations.py
-  ```
-
-This section provides a clear understanding of the entities being added to the Neo4j database and their relationships, helping users to better grasp the structure and purpose of the data model.
 
 
 ## Contributing
