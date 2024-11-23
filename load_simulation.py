@@ -13,10 +13,34 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class Simulation:
-    def __init__(self, circuit_config_path: str, data_dir: str, neo4j_uri: str, neo4j_user: str, neo4j_password: str):
+    def __init__(self, circuit_config_path: str, 
+                 data_dir: str, 
+                 node_population_to_load: str,
+                 neo4j_uri: str, 
+                 neo4j_user: str, 
+                 neo4j_password: str):
+        
         self.circuit = Circuit(circuit_config_path)
         self.data_dir = Path(data_dir)
         self.connector = Neo4jConnector(neo4j_uri, neo4j_user, neo4j_password)
+        self.node_population_name = node_population_to_load
+        self.node_set = None  # Initialize target
+        self.node_set_ids = None
+
+    def load_config(self, config_path: str) -> None:
+        """
+        Load the configuration file and set the target value.
+
+        Parameters
+        ----------
+        config_path : str
+            Path to the configuration JSON file.
+        """
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        self.node_set = config['attrs']['target']
+        self.node_set_ids = self.circuit.nodes[self.node_population_name].ids(self.node_set)
+        logger.info(f"Node set: {self.node_set}")
 
     def load_spike_data(self, config_path: str) -> pd.DataFrame:
         """
@@ -127,7 +151,8 @@ class Simulation:
             edge_storage = libsonata.EdgeStorage(edge_population.h5_filepath)
             population = edge_storage.open_population(pop_name)
             edge_ids = list(range(population.size))
-            selection = libsonata.Selection(edge_ids)
+            #TODO: load from bluepysnap.Simulation filtered spike report. use SONATA sim
+            selection = population.connecting_edges(self.node_set_ids, self.node_set_ids)
             attr_types = list(population.attribute_names)
             attributes = {attr: population.get_attribute(attr, selection) for attr in attr_types}
             source_node_ids = [population.source_node(eid) for eid in edge_ids]
@@ -136,7 +161,7 @@ class Simulation:
             df = pd.DataFrame(attributes)
             df["source_node_id"] = source_node_ids
             df["target_node_id"] = target_node_ids
-            breakpoint()
+
             # Filter edges where both source and target nodes are spiked neurons
             mask = df["source_node_id"].isin(spiked_neurons_set) & df["target_node_id"].isin(spiked_neurons_set)
             df = df[mask]
@@ -225,6 +250,9 @@ class Simulation:
         """
         Run the simulation to load spiked neurons and edges into Neo4j.
         """
+        # Load configuration to set target
+        self.load_config(f"{str(self.data_dir)}/config.json")
+
         # Load spike data
         spike_data_df = self.load_spike_data(f"{str(self.data_dir)}/config.json")
         # Filter spiked neurons
@@ -245,6 +273,7 @@ if __name__ == "__main__":
     simulation = Simulation(
         circuit_config_path="/Users/kurban/Documents/bbp/neo4j_sonata/20211110-BioM_slice10/sonata/circuit_config_local.json",
         data_dir="/Users/kurban/Documents/bbp/neo4j_sonata/examples/simulations/CA1.20211110-BioM/22cc40cf-d0c2-4c0c-8bca-e9a4a96c16bb",
+        node_population_to_load="hippocampus_neurons",
         neo4j_uri="bolt://localhost:7687",
         neo4j_user="neo4j",
         neo4j_password="password"
