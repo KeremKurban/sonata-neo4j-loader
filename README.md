@@ -50,3 +50,13 @@ The `sonata-neo4j-loader` repository is designed to facilitate the loading of SO
 ## Usage
 
 To load a SONATA circuit and simulation results into Neo4j, run the following command:
+
+python src/main.py --circuit_config path/to/circuit_config.json --simulation_config path/to/simulation_config.json
+
+## Contributing
+
+Contributions are welcome! Please fork the repository and submit a pull request for any improvements or bug fixes.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
