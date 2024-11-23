@@ -261,34 +261,6 @@ def create_nodegroup_relationships(
         logger.error(f"Error creating NodeGroup relationships: {e}")
 
 
-# def create_nodegroup_relationships(connector: Neo4jConnector, property_name: str) -> None:
-#     """
-#     Create relationships between NodeGroup nodes based on connections between Neuron nodes.
-
-#     Parameters
-#     ----------
-#     connector : Neo4jConnector
-#         An instance of the Neo4jConnector class.
-#     property_name : str
-#         The property name to base the NodeGroup relationships on (e.g., 'mtype').
-#     """
-#     query = f"""
-#     MATCH (n1:Neuron)-[r:SYNAPSE]->(n2:Neuron)
-#     MATCH (g1:NodeGroup {{name: n1.{property_name}}}), (g2:NodeGroup {{name: n2.{property_name}}})
-#     WITH g1, g2, avg(r.conductance) AS avg_conductance, avg(r.delay) AS avg_delay
-#     MERGE (g1)-[rg:AGGREGATED_SYNAPSE]->(g2)
-#     SET rg.avg_conductance = avg_conductance,
-#         rg.avg_delay = avg_delay
-#     RETURN count(rg) AS relationship_count
-#     """
-#     try:
-#         with connector.driver.session() as session:
-#             result = session.run(query)
-#             relationship_count = result.single()["relationship_count"]
-#             logger.info(f"NodeGroup relationships based on '{property_name}' property created successfully. Total relationships created: {relationship_count}.")
-#     except Exception as e:
-#         logger.error(f"Error creating NodeGroup relationships: {e}")
-
 
 def add_labels_based_on_mtype(connector: Neo4jConnector, apply_labels: bool) -> None:
     """
