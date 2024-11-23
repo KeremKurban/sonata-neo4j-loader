@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
+
 class SimulationLoader(BaseModel):
     """
     A class to load and process simulation results from CoreNeuron.

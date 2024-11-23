@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from neo4j_connector import Neo4jConnector
 from circuit.circuit_loader import load_circuit
 
+
 def main(circuit_config_path: str, simulation_config: dict):
     # Load environment variables
     load_dotenv()
@@ -19,7 +20,9 @@ def main(circuit_config_path: str, simulation_config: dict):
     connector = Neo4jConnector(neo4j_uri, neo4j_user, neo4j_password)
 
     # Load circuit
-    load_circuit(circuit_config_path, connector, node_proportion, edge_proportion, node_set)
+    load_circuit(
+        circuit_config_path, connector, node_proportion, edge_proportion, node_set
+    )
 
     # Get simulation
     # simulation = SimulationTypeA(config=simulation_config)
@@ -27,10 +30,23 @@ def main(circuit_config_path: str, simulation_config: dict):
     # Close connection
     connector.close()
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process SONATA files and run simulations.")
-    parser.add_argument("--circuit_config", type=str, required=True, help="Path to the circuit_config.JSON file.")
-    parser.add_argument("--simulation_config", type=dict, required=False, help="Simulation config file, if exists.")
+    parser = argparse.ArgumentParser(
+        description="Process SONATA files and run simulations."
+    )
+    parser.add_argument(
+        "--circuit_config",
+        type=str,
+        required=True,
+        help="Path to the circuit_config.JSON file.",
+    )
+    parser.add_argument(
+        "--simulation_config",
+        type=dict,
+        required=False,
+        help="Simulation config file, if exists.",
+    )
 
     args = parser.parse_args()
 

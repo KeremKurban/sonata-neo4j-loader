@@ -13,7 +13,14 @@ from .neo4j_operations import (
 
 logger = logging.getLogger(__name__)
 
-def load_circuit(circuit_config_path: str, connector: Neo4jConnector, node_proportion: float, edge_proportion: float, node_set: str):
+
+def load_circuit(
+    circuit_config_path: str,
+    connector: Neo4jConnector,
+    node_proportion: float,
+    edge_proportion: float,
+    node_set: str,
+):
     # Initialize BluePySnap Circuit
     circuit = Circuit(circuit_config_path)
 
@@ -46,5 +53,5 @@ def load_circuit(circuit_config_path: str, connector: Neo4jConnector, node_propo
         bulk_insert_edges(connector, chunk)
 
     # Create relationships between NodeGroup nodes
-    create_nodegroup_relationships(connector, 'mtype')
-    create_nodegroup_relationships(connector, 'synapse_class')
+    create_nodegroup_relationships(connector, "mtype")
+    create_nodegroup_relationships(connector, "synapse_class")

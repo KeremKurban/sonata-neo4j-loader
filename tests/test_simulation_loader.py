@@ -1,18 +1,18 @@
 import unittest
-from sonata_to_neo4j.circuit.circuit_loader import load_circuit
+from sonata_to_neo4j.simulation.simulation_loader import load_simulation_results
 from unittest.mock import patch
 
-class TestCircuitLoader(unittest.TestCase):
+class TestSimulationLoader(unittest.TestCase):
 
-    @patch('src.circuit.circuit_loader.Neo4jDriver')
-    def test_load_circuit(self, MockNeo4jDriver):
+    @patch('src.simulation.simulation_loader.Neo4jDriver')
+    def test_load_simulation_results(self, MockNeo4jDriver):
         # Arrange
         mock_driver = MockNeo4jDriver.return_value
         mock_session = mock_driver.session.return_value
         mock_session.run.return_value = None
 
         # Act
-        result = load_circuit('path/to/circuit/file')
+        result = load_simulation_results('path/to/simulation/results')
 
         # Assert
         mock_driver.session.assert_called_once()

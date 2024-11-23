@@ -5,43 +5,56 @@ import functools
 
 logger = logging.getLogger(__name__)
 
+
 def log_entity_count(entity_type: str, label_or_type: str):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(connector: Neo4jConnector, *args, **kwargs):
             # Define a query to count the entities
             if entity_type == "node":
-                count_query = f"MATCH (n:{label_or_type}) RETURN count(n) AS entity_count"
+                count_query = (
+                    f"MATCH (n:{label_or_type}) RETURN count(n) AS entity_count"
+                )
             elif entity_type == "relationship":
-                count_query = f"MATCH ()-[r:{label_or_type}]->() RETURN count(r) AS entity_count"
+                count_query = (
+                    f"MATCH ()-[r:{label_or_type}]->() RETURN count(r) AS entity_count"
+                )
             else:
                 logger.error(f"Unsupported entity type: {entity_type}")
                 return
-            
+
             # Count entities before execution
             try:
                 with connector.driver.session() as session:
                     result = session.run(count_query)
                     count_before = result.single()["entity_count"]
             except Exception as e:
-                logger.error(f"Error counting {label_or_type} {entity_type}s before execution: {e}")
+                logger.error(
+                    f"Error counting {label_or_type} {entity_type}s before execution: {e}"
+                )
                 return
-            
+
             # Execute the original function
             func(connector, *args, **kwargs)
-            
+
             # Count entities after execution
             try:
                 with connector.driver.session() as session:
                     result = session.run(count_query)
                     count_after = result.single()["entity_count"]
                     created_count = count_after - count_before
-                    logger.info(f"Total '{label_or_type}' {entity_type}s created: {created_count}.")
+                    logger.info(
+                        f"Total '{label_or_type}' {entity_type}s created: {created_count}."
+                    )
             except Exception as e:
-                logger.error(f"Error counting {label_or_type} {entity_type}s after execution: {e}")
-        
+                logger.error(
+                    f"Error counting {label_or_type} {entity_type}s after execution: {e}"
+                )
+
         return wrapper
+
     return decorator
+
 
 def clear_database(connector: Neo4jConnector) -> None:
     """
@@ -60,7 +73,6 @@ def clear_database(connector: Neo4jConnector) -> None:
 
     except Exception as e:
         logger.error(f"Error clearing database: {e}")
-
 
 
 def create_sclass_nodes(connector: Neo4jConnector, nodes: List[Dict[str, Any]]) -> None:
@@ -217,7 +229,9 @@ def create_neuron_belongs_to_nodegroup_relationships(
 
 
 @log_entity_count(entity_type="relationship", label_or_type="AGGREGATED_SYNAPSE")
-def create_nodegroup_relationships(connector: Neo4jConnector, property_name: str) -> None:
+def create_nodegroup_relationships(
+    connector: Neo4jConnector, property_name: str
+) -> None:
     """
     Create relationships between NodeGroup nodes based on connections between Neuron nodes.
 
@@ -239,9 +253,12 @@ def create_nodegroup_relationships(connector: Neo4jConnector, property_name: str
     try:
         with connector.driver.session() as session:
             session.run(query)
-            logger.info(f"NodeGroup relationships based on '{property_name}' property created successfully.")
+            logger.info(
+                f"NodeGroup relationships based on '{property_name}' property created successfully."
+            )
     except Exception as e:
         logger.error(f"Error creating NodeGroup relationships: {e}")
+
 
 # def create_nodegroup_relationships(connector: Neo4jConnector, property_name: str) -> None:
 #     """
