@@ -95,12 +95,12 @@ In addition to entities extracted from load circuit, this will also extract the 
 ### Nodes
 
 - **Spike** :
-    Spike event described as node 
+  - Spike event described as node 
 
 ### Edges
 
 - **HAS_SPIKE** :
-    Represents the relationship between a neuron and its spike events, indicating which spikes are associated with which neurons.
+  - Represents the relationship between a neuron and its spike events, indicating which spikes are associated with which neurons.
 
 
 ## Contributing
