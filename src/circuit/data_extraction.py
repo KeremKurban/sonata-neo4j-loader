@@ -149,7 +149,7 @@ def extract_edges(
             target_population_name = pop_name_parts[1]
         elif pop_name == "default":
             logging.warning(
-                "WARNING: Edge pop name doesnt comply with SONATA standard."
+                f"Edge pop name {pop_name} doesnt comply with SONATA standard."
             )
             source_population_name = "hippocampus_neurons"
             target_population_name = "hippocampus_neurons"

@@ -31,7 +31,7 @@ def load_circuit(circuit_config_path: str, connector: Neo4jConnector, node_propo
 
     # Create NodeGroup nodes based on mtype
     create_nodegroup_nodes(connector, "mtype", "MType", nodes)
-
+    create_nodegroup_nodes(connector, "synapse_class", "SClass", nodes)
     # Insert neuron nodes with mtype labels in chunks
     chunk_size = 1000
     for i in range(0, len(nodes), chunk_size):
@@ -40,11 +40,11 @@ def load_circuit(circuit_config_path: str, connector: Neo4jConnector, node_propo
 
     # Create BELONGS_TO_MTYPE relationships
     create_neuron_belongs_to_nodegroup_relationships(connector, "mtype", "MType", nodes)
-
     # Insert edges in chunks
     for i in range(0, len(edges), chunk_size):
         chunk = edges[i : i + chunk_size]
         bulk_insert_edges(connector, chunk)
 
     # Create relationships between NodeGroup nodes
-    create_nodegroup_relationships(connector)
+    create_nodegroup_relationships(connector, 'mtype')
+    create_nodegroup_relationships(connector, 'synapse_class')
