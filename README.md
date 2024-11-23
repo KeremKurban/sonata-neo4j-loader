@@ -49,16 +49,59 @@ The `sonata-neo4j-loader` repository is designed to facilitate the loading of SO
 
 ## Usage
 
+## Load Circuit
+
 To load a SONATA circuit and simulation results into Neo4j, run the following command:
 
+```bash
 python src/main.py --circuit_config path/to/circuit_config.json --simulation_config path/to/simulation_config.json
+```
 
-Optionally , you can also give simulation config to load spiked neurons and their activity instead.
+This will create certain nodes and edge types as following:
 
+### Nodes
+
+- **Neuron**: 
+  - Represents one node per neuron in the circuit target.
+
+- **NeuronGroup**: 
+  - Meta Node Class of population of Neurons.
+  - **MType**: Neurons aggregated by their `mtype` property (e.g., SP_PC, L5_TTPC).
+  - **SClass**: Neurons aggregated by their `synapse_class` property (e.g., EXC, INH).
+
+- **Population**: 
+  - Edge population name given in the SONATA file (e.g., hippocampus_neurons).
+
+### Edges
+
+- **SYNAPSE**: 
+  - Represents synaptic connections between neurons, detailing the interaction and communication pathways.
+
+- **BELONGS_TO_MTYPE**: 
+  - Connects neurons to their respective MType groups, indicating the morphological type classification.
+
+- **AGGREGATED_SYNAPSE**: 
+  - Represents a collection of synapses aggregated for analysis or visualization purposes.
+
+## Load Simulation
+ 
+You can also give simulation config to load spiked neurons and their activity instead.
+
+```bash
 python src/main.py --simulation_config path/to/simulation_config.json
+```
+In addition to entities extracted from load circuit, this will also extract the following entities:
+
+- **Spike** :
+    Spike event described as node 
+
+Edges:
+
+- **HAS_SPIKE** :
+    Represents the relationship between a neuron and its spike events, indicating which spikes are associated with which neurons.
 
 
-## Node and Edge Entities
+## Node and Edge Entities Created 
 
 ### Nodes
 
@@ -80,20 +123,14 @@ python src/main.py --simulation_config path/to/simulation_config.json
 
 - **Neuron Node Creation**: The logic for creating neuron nodes can be found in the `Neo4jConnector` class.
   ```python:sonata_to_neo4j/src/neo4j_connector.py
-  startLine: 11
-  endLine: 21
   ```
 
 - **SYNAPSE Edge Creation**: The creation of synapse edges is handled in the `Neo4jConnector` class.
   ```python:sonata_to_neo4j/src/neo4j_connector.py
-  startLine: 23
-  endLine: 39
   ```
 
 - **BELONGS_TO_SCLASS Relationships**: The creation of these relationships is detailed in the `neo4j_operations.py`.
   ```python:sonata_to_neo4j/src/circuit/neo4j_operations.py
-  startLine: 41
-  endLine: 93
   ```
 
 This section provides a clear understanding of the entities being added to the Neo4j database and their relationships, helping users to better grasp the structure and purpose of the data model.
