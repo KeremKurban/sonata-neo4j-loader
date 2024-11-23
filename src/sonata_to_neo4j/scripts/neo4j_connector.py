@@ -1,5 +1,8 @@
 from neo4j import GraphDatabase
+from typing import List, Dict, Any
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Neo4jConnector:
     def __init__(self, uri, user, password):
@@ -32,7 +35,7 @@ class Neo4jConnector:
             """
             MATCH (a:Neuron {id: $start_id}), (b:Neuron {id: $end_id})
             CREATE (a)-[:SYNAPSE {properties: $properties}]->(b)
-        """,
+            """,
             start_id=start_node_id,
             end_id=end_node_id,
             properties=properties,
