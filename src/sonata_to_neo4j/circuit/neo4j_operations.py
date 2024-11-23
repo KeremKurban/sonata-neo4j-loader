@@ -1,7 +1,8 @@
-from neo4j_connector import Neo4jConnector
+import functools
 import logging
 from typing import Any, Dict, List
-import functools
+
+from sonata_to_neo4j.utils import Neo4jConnector
 
 logger = logging.getLogger(__name__)
 

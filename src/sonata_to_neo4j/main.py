@@ -1,8 +1,9 @@
 import argparse
 import os
+
+from circuit.circuit_loader import load_circuit
 from dotenv import load_dotenv
 from neo4j_connector import Neo4jConnector
-from circuit.circuit_loader import load_circuit
 
 
 def main(circuit_config_path: str, simulation_config: dict):

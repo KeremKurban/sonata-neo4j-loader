@@ -1,14 +1,16 @@
 import logging
+
 from bluepysnap import Circuit
-from neo4j_connector import Neo4jConnector
-from .data_extraction import extract_nodes, extract_edges
+from sonata_to_neo4j.utils import Neo4jConnector
+
+from .data_extraction import extract_edges, extract_nodes
 from .neo4j_operations import (
+    bulk_insert_edges,
+    bulk_insert_neuron_nodes,
     clear_database,
+    create_neuron_belongs_to_nodegroup_relationships,
     create_nodegroup_nodes,
     create_nodegroup_relationships,
-    bulk_insert_neuron_nodes,
-    bulk_insert_edges,
-    create_neuron_belongs_to_nodegroup_relationships,
 )
 
 logger = logging.getLogger(__name__)

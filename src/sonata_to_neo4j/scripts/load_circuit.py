@@ -1,13 +1,14 @@
 import argparse
-import os
 import logging
+import os
+import random
 from typing import Any, Dict, List, Tuple
+
+import libsonata
 import pandas as pd
 from bluepysnap import Circuit
 from dotenv import load_dotenv
-from neo4j_connector import Neo4jConnector
-import libsonata
-import random
+from sonata_to_neo4j.utils import Neo4jConnector
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -271,10 +272,18 @@ def extract_edges(
         # Select a subset of edge IDs based on the given proportion
         total_edges = population.size
         selected_edge_count = int(total_edges * proportion)
-        logger.info(f"Selected {selected_edge_count} edges for import from population {pop_name}.")
-        
-        user_input = input(f"Do you want to proceed with importing {selected_edge_count} edges? (yes/no): ").strip().lower()
-        if user_input != 'yes':
+        logger.info(
+            f"Selected {selected_edge_count} edges for import from population {pop_name}."
+        )
+
+        user_input = (
+            input(
+                f"Do you want to proceed with importing {selected_edge_count} edges? (yes/no): "
+            )
+            .strip()
+            .lower()
+        )
+        if user_input != "yes":
             logger.info("Edge import process terminated by user.")
             return []
         edge_ids = list(range(total_edges))
@@ -391,7 +400,12 @@ def clear_database(connector: Neo4jConnector) -> None:
         logger.error(f"Error clearing database: {e}")
 
 
-def create_nodegroup_nodes(connector: Neo4jConnector, property_name: str, label: str, nodes: List[Dict[str, Any]]) -> None:
+def create_nodegroup_nodes(
+    connector: Neo4jConnector,
+    property_name: str,
+    label: str,
+    nodes: List[Dict[str, Any]],
+) -> None:
     """
     Create NodeGroup nodes in Neo4j based on a specified property and label.
 
@@ -406,7 +420,11 @@ def create_nodegroup_nodes(connector: Neo4jConnector, property_name: str, label:
     nodes : list of dict
         A list of dictionaries containing node properties.
     """
-    unique_values = {node[property_name] for node in nodes if property_name in node and node[property_name] is not None}
+    unique_values = {
+        node[property_name]
+        for node in nodes
+        if property_name in node and node[property_name] is not None
+    }
     query = f"""
     UNWIND $values AS value
     MERGE (n:NodeGroup:{label} {{name: value}})
@@ -418,7 +436,13 @@ def create_nodegroup_nodes(connector: Neo4jConnector, property_name: str, label:
     except Exception as e:
         logger.error(f"Error creating NodeGroup {label} nodes: {e}")
 
-def create_neuron_belongs_to_nodegroup_relationships(connector: Neo4jConnector, property_name: str, label: str, nodes: List[Dict[str, Any]]) -> None:
+
+def create_neuron_belongs_to_nodegroup_relationships(
+    connector: Neo4jConnector,
+    property_name: str,
+    label: str,
+    nodes: List[Dict[str, Any]],
+) -> None:
     """
     Create BELONGS_TO relationships between nodes and NodeGroup nodes based on a specified property.
 
@@ -442,9 +466,12 @@ def create_neuron_belongs_to_nodegroup_relationships(connector: Neo4jConnector, 
     try:
         with connector.driver.session() as session:
             session.run(query, nodes=nodes)
-            logger.info(f"BELONGS_TO_{label.upper()} relationships created successfully.")
+            logger.info(
+                f"BELONGS_TO_{label.upper()} relationships created successfully."
+            )
     except Exception as e:
         logger.error(f"Error creating BELONGS_TO_{label.upper()} relationships: {e}")
+
 
 def create_nodegroup_relationships(connector: Neo4jConnector) -> None:
     """
@@ -470,6 +497,7 @@ def create_nodegroup_relationships(connector: Neo4jConnector) -> None:
             logger.info("NodeGroup relationships created successfully.")
     except Exception as e:
         logger.error(f"Error creating NodeGroup relationships: {e}")
+
 
 def create_nodegroup_relationships(connector: Neo4jConnector) -> None:
     """
@@ -523,6 +551,7 @@ def create_nodegroup_relationships(connector: Neo4jConnector) -> None:
     except Exception as e:
         logger.error(f"Error creating NodeGroup relationships: {e}")
 
+
 def main(circuit_config_path: str, apply_labels: bool = False) -> None:
     """
     Main function to process SONATA files, extract nodes, edges, and populations, and insert them into Neo4j.
@@ -563,7 +592,7 @@ def main(circuit_config_path: str, apply_labels: bool = False) -> None:
     nodes = sampled_nodes_df.to_dict("records")
 
     # Create NodeGroup nodes based on mtype
-    create_nodegroup_nodes(connector, 'mtype', 'MType', nodes)
+    create_nodegroup_nodes(connector, "mtype", "MType", nodes)
 
     # Insert population nodes
     # bulk_insert_population_nodes(connector, populations)
@@ -575,7 +604,7 @@ def main(circuit_config_path: str, apply_labels: bool = False) -> None:
         bulk_insert_neuron_nodes(connector, chunk)
 
     # Create BELONGS_TO_MTYPE relationships
-    create_neuron_belongs_to_nodegroup_relationships(connector, 'mtype', 'MType', nodes)
+    create_neuron_belongs_to_nodegroup_relationships(connector, "mtype", "MType", nodes)
 
     # # Insert BELONGS_TO relationships in chunks
     # for i in range(0, len(belongs_to_relations), chunk_size):
@@ -595,7 +624,6 @@ def main(circuit_config_path: str, apply_labels: bool = False) -> None:
 
     # Close connection
     connector.close()
-
 
 
 if __name__ == "__main__":

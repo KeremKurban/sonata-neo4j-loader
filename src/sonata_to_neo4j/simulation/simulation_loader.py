@@ -1,7 +1,8 @@
 # Bluepysnap Simulation loader.
-from pydantic import BaseModel
 import logging
 from typing import Any, Dict
+
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 

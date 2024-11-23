@@ -1,9 +1,10 @@
 import logging
+import random
 from typing import Any, Dict, List, Tuple
+
+import libsonata
 import pandas as pd
 from bluepysnap import Circuit
-import libsonata
-import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
